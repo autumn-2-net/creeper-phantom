@@ -25,6 +25,16 @@
 
 容器追击最多持续 200 tick；目标失去视线、撞墙、容器消失或检测到玩家/猫时会放弃。
 
+## GT / GTL 多方块联动
+
+安装 GTCEu 时，苦力幻翼每轮机器搜索有 **25% 概率**尝试轰炸附近**已成型的多方块控制器**，包括使用同一控制器接口的 GTLCore、GTL Additions 等附属机器。没有安装 GTCEu 时，联动自动关闭，模组仍可独立运行。
+
+机器袭击可以优先于当前玩家目标；一旦开始俯冲，不会因为仍能看见玩家就立刻折返。它会寻找控制器旁边露天、可见且有足够飞行空间的外露面，而不只检查控制器正上方。控制器未成型、变为未成型或被移除时，不会继续袭击该目标。
+
+机器判定与容器的 10% 判定分开，控制器不会因为有物品接口就再走一次容器判定。未命中机器袭击或没有可接近的控制器时，继续原有行为。搜索沿用上述距离、间隔和区块检查上限，仍遵循怕猫及 `mobGriefing`。
+
+靠近控制器后，普通形态使用引信，高压形态立即自爆。联动不会直接删除控制器或整台机器，能否炸毁及具体破坏范围仍由正常爆炸和方块抗爆性决定。
+
 ## 高压形态
 
 普通苦力幻翼被闪电击中后进入高压形态，周身出现流动电弧。自然闪电、引雷和命令产生的实际雷击都能触发转换，强化状态会保存到存档。
@@ -60,6 +70,8 @@
 | `containerSearchInterval` | `200` | 搜索间隔 tick 数，另加 0～39 tick 随机间隔 |
 | `containerSearchRadius` | `32` | 水平搜索半径，单位为格 |
 | `attackModdedContainers` | `true` | 在 `Container` 之外识别 Forge 物品能力接口 |
+| `attackGtMultiblocks` | `true` | 启用可选 GT 多方块袭击 |
+| `gtMultiblockBombingChance` | `0.25` | 每轮机器搜索触发概率，允许优先于玩家目标 |
 | `fuseTicks` | `20` | 普通形态引信时间 |
 | `explosionPower` | `3.0` | 普通形态爆炸强度 |
 | `chargedExplosionPower` | `6.0` | 高压形态爆炸强度 |
@@ -86,7 +98,7 @@ export GRADLE_USER_HOME="$PWD/.gradle-user-home"
 
 ## 验证
 
-已通过 Forge GameTest 集成检查，并收到游戏内安装测试可用的反馈。测试覆盖两种刷怪蛋、雷击与存档恢复、引信与瞬爆、自然替换、容器遮挡和 `mobGriefing`。完整范围见 [VERIFICATION.md](VERIFICATION.md)。
+基础版本已通过 Forge GameTest 集成检查，并收到游戏内安装测试可用的反馈。测试覆盖两种刷怪蛋、雷击与存档恢复、引信与瞬爆、自然替换、容器遮挡和 `mobGriefing`。GT 联动另有使用接口替身的控制器选择与目标优先级测试；这不等于已经在完整 GTL 整合包中实测。完整范围见 [VERIFICATION.md](VERIFICATION.md)。
 
 ```sh
 ./gradlew -Pverification runGameTest

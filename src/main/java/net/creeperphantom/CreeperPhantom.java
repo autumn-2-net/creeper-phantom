@@ -26,6 +26,7 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.common.capabilities.ForgeCapabilities;
@@ -68,7 +69,8 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
     @Override
     protected void registerGoals() {
         super.registerGoals();
-        goalSelector.addGoal(0, new BombContainerGoal());
+        goalSelector.addGoal(0, new BombMachineGoal());
+        goalSelector.addGoal(1, new BombContainerGoal());
     }
 
     @Override
@@ -174,6 +176,8 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
         if (!level().hasChunkAt(pos)) return false;
         BlockEntity blockEntity = level().getBlockEntity(pos);
         if (blockEntity == null || blockEntity.isRemoved()) return false;
+        // A controller may expose item slots too. Never give it a second, container-based raid roll.
+        if (GtMultiblocks.classify(blockEntity) != GtMultiblocks.Kind.OTHER) return false;
         if (blockEntity instanceof Container container) return container.getContainerSize() > 0;
         if (!Config.MODDED_CONTAINERS.get()) return false;
         if (blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER).map(handler -> handler.getSlots() > 0).orElse(false)) return true;
@@ -181,6 +185,13 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
             if (blockEntity.getCapability(ForgeCapabilities.ITEM_HANDLER, side).map(handler -> handler.getSlots() > 0).orElse(false)) return true;
         }
         return false;
+    }
+
+    private boolean formedControllerAt(BlockPos pos) {
+        if (!level().hasChunkAt(pos)) return false;
+        BlockEntity entity = level().getBlockEntity(pos);
+        return entity != null && !entity.isRemoved()
+                && GtMultiblocks.classify(entity) == GtMultiblocks.Kind.FORMED_CONTROLLER;
     }
 
     private Vec3 approach(BlockPos pos) {
@@ -196,6 +207,42 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
         BlockHitResult hit = level().clip(new ClipContext(getEyePosition(), approach(pos),
                 ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
         return hit.getType() == HitResult.Type.MISS || hit.getBlockPos().equals(pos);
+    }
+
+    private Vec3 machineApproach(BlockPos controller) {
+        Vec3 best = null;
+        double nearest = Double.MAX_VALUE;
+        for (Direction face : Direction.values()) {
+            double extent = face.getAxis() == Direction.Axis.Y ? getBbHeight() / 2 : getBbWidth() / 2;
+            Vec3 point = Vec3.atCenterOf(controller).add(Vec3.atLowerCornerOf(face.getNormal()).scale(0.6 + extent))
+                    .subtract(0, getBbHeight() / 2, 0);
+            double distance = position().distanceToSqr(point);
+            if (distance < nearest && machineApproachClear(controller, point)) {
+                best = point;
+                nearest = distance;
+            }
+        }
+        return best;
+    }
+
+    private boolean machineApproachClear(BlockPos controller, Vec3 point) {
+        double halfWidth = getBbWidth() / 2;
+        AABB arrival = new AABB(point.x - halfWidth, point.y, point.z - halfWidth,
+                point.x + halfWidth, point.y + getBbHeight(), point.z + halfWidth);
+        BlockPos origin = blockPosition();
+        // Check the entire ray and arrival box before any operation that may read world blocks.
+        int minX = Mth.floor(Math.min(Math.min(arrival.minX, origin.getX()), controller.getX()));
+        int minZ = Mth.floor(Math.min(Math.min(arrival.minZ, origin.getZ()), controller.getZ()));
+        int maxX = Mth.floor(Math.max(Math.max(arrival.maxX, origin.getX()), controller.getX()));
+        int maxZ = Mth.floor(Math.max(Math.max(arrival.maxZ, origin.getZ()), controller.getZ()));
+        if (!level().hasChunksAt(minX, minZ, maxX, maxZ)
+                || !level().canSeeSky(BlockPos.containing(point)) || !level().noCollision(this, arrival)) return false;
+        // The arrival route must be clear, and the controller itself must be visible from there.
+        if (level().clip(new ClipContext(getEyePosition(), point.add(0, getBbHeight() / 2, 0),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this)).getType() != HitResult.Type.MISS) return false;
+        BlockHitResult face = level().clip(new ClipContext(point.add(0, getBbHeight() / 2, 0), Vec3.atCenterOf(controller),
+                ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, this));
+        return face.getType() == HitResult.Type.MISS || face.getBlockPos().equals(controller);
     }
 
     private boolean catsNearby() {
@@ -216,31 +263,44 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
         return nearest != null;
     }
 
-    private final class BombContainerGoal extends Goal {
-        private BlockPos container;
+    private abstract class BombBlockGoal extends Goal {
+        private BlockPos blockTarget;
+        private Vec3 attackPoint;
         private int nextSearch;
         private int flightTicks;
 
-        BombContainerGoal() {
+        BombBlockGoal() {
             setFlags(EnumSet.of(Flag.MOVE));
         }
 
+        abstract boolean enabled();
+        abstract boolean playerTakesPriority();
+        abstract double chance();
+        abstract boolean accepts(BlockPos pos);
+        abstract Vec3 approachFor(BlockPos pos);
+        abstract boolean pathStillClear(BlockPos pos, Vec3 point);
+        double contactDistanceSquared() { return 2.25; }
+
         @Override
         public boolean canUse() {
-            if (isPrimed() || getTarget() != null || tickCount < nextSearch) return false;
+            if (!enabled() || isPrimed() || (playerTakesPriority() && getTarget() != null)
+                    || tickCount < nextSearch) return false;
             nextSearch = tickCount + Config.SEARCH_INTERVAL.get() + random.nextInt(40);
             if (!ForgeEventFactory.getMobGriefingEvent(level(), CreeperPhantom.this)
-                    || acquireVisiblePlayer() || catsNearby()
-                    || random.nextDouble() >= Config.CONTAINER_CHANCE.get()) return false;
-            container = findContainer();
-            return container != null;
+                    || (playerTakesPriority() && acquireVisiblePlayer()) || catsNearby()
+                    || random.nextDouble() >= chance()) return false;
+            RaidTarget found = findBlockTarget();
+            if (found == null) return false;
+            blockTarget = found.pos();
+            attackPoint = found.approach();
+            return true;
         }
 
-        private BlockPos findContainer() {
+        private RaidTarget findBlockTarget() {
             if (!(level() instanceof ServerLevel server)) return null;
             int radius = Config.SEARCH_RADIUS.get();
             BlockPos origin = blockPosition();
-            BlockPos best = null;
+            RaidTarget best = null;
             double closest = Double.MAX_VALUE;
             int inspected = 0;
             for (int cx = (origin.getX() - radius) >> 4; cx <= (origin.getX() + radius) >> 4; cx++) {
@@ -252,9 +312,12 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
                         int dx = pos.getX() - origin.getX(), dz = pos.getZ() - origin.getZ();
                         if (dx * dx + dz * dz > radius * radius || Math.abs(pos.getY() - origin.getY()) > 48) continue;
                         double distance = pos.distToCenterSqr(position());
-                        if (distance < closest && inventoryAt(pos) && exposed(pos)) {
-                            closest = distance;
-                            best = pos.immutable();
+                        if (distance < closest && accepts(pos)) {
+                            Vec3 point = approachFor(pos);
+                            if (point != null) {
+                                closest = distance;
+                                best = new RaidTarget(pos.immutable(), point);
+                            }
                         }
                     }
                 }
@@ -264,22 +327,24 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
 
         @Override
         public boolean canContinueToUse() {
-            return !isPrimed() && getTarget() == null && container != null && flightTicks < 200
-                    && !horizontalCollision && inventoryAt(container) && exposed(container)
+            return enabled() && !isPrimed() && (!playerTakesPriority() || getTarget() == null)
+                    && blockTarget != null && flightTicks < 200
+                    && !horizontalCollision && accepts(blockTarget) && pathStillClear(blockTarget, attackPoint)
                     && ForgeEventFactory.getMobGriefingEvent(level(), CreeperPhantom.this);
         }
 
         @Override
         public void start() {
             flightTicks = 0;
-            bombingPoint = approach(container);
+            bombingPoint = attackPoint;
             playSound(SoundEvents.PHANTOM_SWOOP, 1.0F, 0.7F);
         }
 
         @Override
         public void stop() {
             bombingPoint = null;
-            container = null;
+            blockTarget = null;
+            attackPoint = null;
         }
 
         @Override
@@ -290,11 +355,32 @@ public final class CreeperPhantom extends Phantom implements PowerableMob {
         @Override
         public void tick() {
             flightTicks++;
-            if (flightTicks % 10 == 0 && (acquireVisiblePlayer() || catsNearby())) {
+            if (flightTicks % 10 == 0 && ((playerTakesPriority() && acquireVisiblePlayer()) || catsNearby())) {
                 stop();
                 return;
             }
-            if (bombingPoint != null && position().distanceToSqr(bombingPoint) < 2.25) ignite();
+            if (bombingPoint != null && position().distanceToSqr(bombingPoint) < contactDistanceSquared()) ignite();
         }
+    }
+
+    private record RaidTarget(BlockPos pos, Vec3 approach) {}
+
+    private final class BombContainerGoal extends BombBlockGoal {
+        @Override boolean enabled() { return true; }
+        @Override boolean playerTakesPriority() { return true; }
+        @Override double chance() { return Config.CONTAINER_CHANCE.get(); }
+        @Override boolean accepts(BlockPos pos) { return inventoryAt(pos); }
+        @Override Vec3 approachFor(BlockPos pos) { return exposed(pos) ? approach(pos) : null; }
+        @Override boolean pathStillClear(BlockPos pos, Vec3 point) { return exposed(pos); }
+    }
+
+    private final class BombMachineGoal extends BombBlockGoal {
+        @Override boolean enabled() { return Config.GT_MACHINE_RAIDS.get() && GtMultiblocks.available(); }
+        @Override boolean playerTakesPriority() { return false; }
+        @Override double chance() { return Config.GT_MACHINE_CHANCE.get(); }
+        @Override boolean accepts(BlockPos pos) { return formedControllerAt(pos); }
+        @Override Vec3 approachFor(BlockPos pos) { return machineApproach(pos); }
+        @Override boolean pathStillClear(BlockPos pos, Vec3 point) { return machineApproachClear(pos, point); }
+        @Override double contactDistanceSquared() { return 0.36; }
     }
 }
