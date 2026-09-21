@@ -2,5 +2,9 @@
   "entity.creeperphantom.creeper_phantom": "苦力幻翼",
   "item.creeperphantom.creeper_phantom_spawn_egg": "苦力幻翼刷怪蛋",
   "entity.creeperphantom.charged_creeper_phantom": "高压苦力幻翼",
-  "item.creeperphantom.charged_creeper_phantom_spawn_egg": "高压苦力幻翼刷怪蛋"
+  "item.creeperphantom.charged_creeper_phantom_spawn_egg": "高压苦力幻翼刷怪蛋",
+  "entity.creeperphantom.ender_creeper": "末影苦力怕",
+  "entity.creeperphantom.charged_ender_creeper": "高压末影苦力怕",
+  "item.creeperphantom.ender_creeper_spawn_egg": "末影苦力怕刷怪蛋",
+  "item.creeperphantom.charged_ender_creeper_spawn_egg": "高压末影苦力怕刷怪蛋"
 }

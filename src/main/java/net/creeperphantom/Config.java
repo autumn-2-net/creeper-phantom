@@ -5,6 +5,9 @@ import net.minecraftforge.common.ForgeConfigSpec;
 public final class Config {
     public static final ForgeConfigSpec SPEC;
     public static final ForgeConfigSpec.DoubleValue REPLACEMENT_CHANCE;
+    public static final ForgeConfigSpec.BooleanValue PHANTOM_NATURAL_SPAWNS;
+    public static final ForgeConfigSpec.BooleanValue ENDER_NATURAL_SPAWNS;
+    public static final ForgeConfigSpec.DoubleValue ENDER_SPAWN_MULTIPLIER;
     public static final ForgeConfigSpec.DoubleValue CONTAINER_CHANCE;
     public static final ForgeConfigSpec.IntValue SEARCH_INTERVAL;
     public static final ForgeConfigSpec.IntValue SEARCH_RADIUS;
@@ -17,9 +20,15 @@ public final class Config {
 
     static {
         var b = new ForgeConfigSpec.Builder();
-        REPLACEMENT_CHANCE = b.comment("Fraction of naturally spawned vanilla phantoms replaced. All vanilla insomnia checks still apply.")
-                .defineInRange("naturalReplacementChance", 0.25, 0.0, 1.0);
-        CONTAINER_CHANCE = b.comment("Chance per search while no visible attackable player can be acquired. Not a per-tick chance.")
+        PHANTOM_NATURAL_SPAWNS = b.comment("Enable natural Creeper Phantom spawns. Does not affect eggs, commands or existing mobs.")
+                .define("phantomNaturalSpawns", true);
+        REPLACEMENT_CHANCE = b.comment("Phantom spawn multiplier. Kept under the old key for compatibility: 0.25 replaces 25%, 1 replaces all, 2 requests two per valid vanilla spawn. Fractional extras are random; space and other spawn rules still apply.")
+                .defineInRange("naturalReplacementChance", 0.25, 0.0, 64.0);
+        ENDER_NATURAL_SPAWNS = b.comment("Enable natural Ender Creeper spawns. Does not affect eggs, commands or existing mobs.")
+                .define("enderNaturalSpawns", true);
+        ENDER_SPAWN_MULTIPLIER = b.comment("Ender Creeper multiplier per valid natural Enderman spawn. Same semantics as naturalReplacementChance.")
+                .defineInRange("enderSpawnMultiplier", 0.25, 0.0, 64.0);
+        CONTAINER_CHANCE = b.comment("Autonomous container raid chance per search, not per tick. Phantoms prefer visible players; Ender Creepers only prefer provoked combat targets. Staring is never required to raid containers.")
                 .defineInRange("containerBombingChance", 0.10, 0.0, 1.0);
         SEARCH_INTERVAL = b.comment("Ticks between block-target search rolls (containers and GT machines; 20 ticks = 1 second).")
                 .defineInRange("containerSearchInterval", 200, 20, 12000);

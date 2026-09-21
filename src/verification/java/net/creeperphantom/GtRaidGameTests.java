@@ -34,6 +34,7 @@ public final class GtRaidGameTests {
 
     @GameTest(template = "empty", batch = "gtRaids", timeoutTicks = 100)
     public static void controllerPriorityAndFormation(GameTestHelper helper) {
+        Config.SPEC.setConfig(com.electronwill.nightconfig.core.CommentedConfig.inMemory());
         helper.setNight();
         helper.runAfterDelay(15, () -> exercise(helper));
     }
@@ -51,6 +52,7 @@ public final class GtRaidGameTests {
         Field access = null;
         Object originalAdapter = null;
         CreeperPhantom raider = null;
+        EnderCreeper ender = null;
         BlockPos controllerPos = helper.absolutePos(new BlockPos(7, 261, 7));
         try {
             // This test run has no GT installation: first verify the optional bridge is inactive.
@@ -114,6 +116,18 @@ public final class GtRaidGameTests {
             raider.tickCount += 300;
             helper.assertTrue(machineGoal.canUse(), "Restored controller may be attacked again");
             machineGoal.start();
+
+            // The ender variant must use the same GT priority even while angry at a player.
+            for (int x = 1; x <= 11; x++) for (int z = 1; z <= 11; z++) helper.setBlock(x, 260, z, Blocks.STONE);
+            ender = helper.spawn(CreeperPhantomMod.ENDER_CREEPER.get(), 3, 261, 4);
+            ender.setNoAi(true);
+            ender.setTarget(player);
+            var enderGoals = (GoalSelector) goalsField.get(ender);
+            var teleportRaid = find(enderGoals, "TeleportBlockGoal");
+            helper.assertTrue(teleportRaid.canUse(), "Ender GT raid must take priority over an angry player target");
+            teleportRaid.start();
+            helper.assertTrue(ender.isPrimed(), "Ender GT raid must teleport next to the formed controller and ignite");
+            ender.discard();
             level.setBlockAndUpdate(controllerPos, Blocks.AIR.defaultBlockState());
             helper.assertFalse(machineGoal.canContinueToUse(), "Removing the controller must cancel the raid");
             machineGoal.stop();
@@ -122,6 +136,7 @@ public final class GtRaidGameTests {
             throw new AssertionError(e);
         } finally {
             if (raider != null) raider.discard();
+            if (ender != null) ender.discard();
             level.setBlockAndUpdate(controllerPos, Blocks.AIR.defaultBlockState());
             level.setBlockAndUpdate(controllerPos.above(), Blocks.AIR.defaultBlockState());
             if (access != null) {

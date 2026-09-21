@@ -1,0 +1,24 @@
+# 自然生成开关不影响刷怪蛋、命令和已存在的生物。
+phantomNaturalSpawns = true
+enderNaturalSpawns = true
+
+# 生成倍率：0 不替换；0.25 替换约 25%；1 全替换；2 尝试每次生成两只。
+# 小数部分按概率增加一只，最大 64。额外个体仍受可用空间、加载和生成条件限制。
+# 第一个键为兼容旧配置而保留，用于苦力幻翼。
+naturalReplacementChance = 0.25
+enderSpawnMultiplier = 0.25
+
+# 对没有敌对玩家目标的生物，容器主动搜索无需注视或攻击。
+containerBombingChance = 0.10
+containerSearchInterval = 200
+containerSearchRadius = 32
+attackModdedContainers = true
+
+# GT 联动可抢占玩家目标，未安装 GTCEu 时自动跳过。
+attackGtMultiblocks = true
+gtMultiblockBombingChance = 0.25
+
+# 两种生物共用爆炸设置。高压形态不等待引信。
+fuseTicks = 20
+explosionPower = 3.0
+chargedExplosionPower = 6.0

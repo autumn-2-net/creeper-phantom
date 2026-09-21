@@ -19,7 +19,11 @@ import net.minecraftforge.gametest.PrefixGameTestTemplate;
 public final class PhantomGameTests {
     @GameTest(template = "empty", timeoutTicks = 100)
     public static void formsEggsLightningAndFuses(GameTestHelper helper) {
+        Config.SPEC.setConfig(com.electronwill.nightconfig.core.CommentedConfig.inMemory());
         helper.setNight();
+        // Outdoor fixtures lie above the template and must be reset when reusing the test world.
+        for (int x = 0; x <= 12; x++) for (int z = 0; z <= 12; z++)
+            for (int y = 261; y <= 266; y++) helper.setBlock(x, y, z, net.minecraft.world.level.block.Blocks.AIR);
         helper.assertTrue(((SpawnEggItem) CreeperPhantomMod.SPAWN_EGG.get()).getType(null)
                 == CreeperPhantomMod.PHANTOM.get(), "Normal egg type");
         helper.assertTrue(((SpawnEggItem) CreeperPhantomMod.CHARGED_SPAWN_EGG.get()).getType(null)
@@ -156,6 +160,8 @@ public final class PhantomGameTests {
             helper.assertTrue(target.getHealth() < target.getMaxHealth(), "Protected blocks must not disable entity damage");
         } catch (ReflectiveOperationException e) { throw new AssertionError(e); }
         finally {
+            helper.setBlock(7, 261, 7, net.minecraft.world.level.block.Blocks.AIR);
+            helper.setBlock(7, 262, 7, net.minecraft.world.level.block.Blocks.AIR);
             Config.CONTAINER_CHANCE.set(oldChance);
             grief.set(oldGrief, level.getServer());
         }

@@ -6,7 +6,7 @@ license="All Rights Reserved"
 modId="creeperphantom"
 version="${version}"
 displayName="Creeper Phantom"
-description='''A phantom with a creeper's face and explosive temperament. Stalks sleepless players and occasionally raids exposed inventories.'''
+description='''Explosive phantom and enderman variants with charged forms, configurable natural spawns, autonomous inventory raids and optional GT multiblock targeting.'''
 
 [[dependencies.creeperphantom]]
 modId="forge"

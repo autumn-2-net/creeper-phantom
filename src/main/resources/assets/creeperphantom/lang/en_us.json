@@ -2,5 +2,9 @@
   "entity.creeperphantom.creeper_phantom": "Creeper Phantom",
   "item.creeperphantom.creeper_phantom_spawn_egg": "Creeper Phantom Spawn Egg",
   "entity.creeperphantom.charged_creeper_phantom": "Charged Creeper Phantom",
-  "item.creeperphantom.charged_creeper_phantom_spawn_egg": "Charged Creeper Phantom Spawn Egg"
+  "item.creeperphantom.charged_creeper_phantom_spawn_egg": "Charged Creeper Phantom Spawn Egg",
+  "entity.creeperphantom.ender_creeper": "Ender Creeper",
+  "entity.creeperphantom.charged_ender_creeper": "Charged Ender Creeper",
+  "item.creeperphantom.ender_creeper_spawn_egg": "Ender Creeper Spawn Egg",
+  "item.creeperphantom.charged_ender_creeper_spawn_egg": "Charged Ender Creeper Spawn Egg"
 }

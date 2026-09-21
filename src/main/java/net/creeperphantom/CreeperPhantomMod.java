@@ -3,6 +3,7 @@ package net.creeperphantom;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.monster.EnderMan;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraftforge.common.ForgeSpawnEggItem;
@@ -34,6 +35,16 @@ public final class CreeperPhantomMod {
                     .build(ID + ":charged_creeper_phantom"));
     public static final RegistryObject<Item> CHARGED_SPAWN_EGG = ITEMS.register("charged_creeper_phantom_spawn_egg",
             () -> new ForgeSpawnEggItem(CHARGED_PHANTOM, 0x438C35, 0x62ECFF, new Item.Properties()));
+    public static final RegistryObject<EntityType<EnderCreeper>> ENDER_CREEPER = ENTITIES.register("ender_creeper",
+            () -> EntityType.Builder.of(EnderCreeper::new, MobCategory.MONSTER)
+                    .sized(0.6F, 2.9F).clientTrackingRange(8).build(ID + ":ender_creeper"));
+    public static final RegistryObject<EntityType<EnderCreeper>> CHARGED_ENDER_CREEPER = ENTITIES.register("charged_ender_creeper",
+            () -> EntityType.Builder.of(EnderCreeper::new, MobCategory.MONSTER)
+                    .sized(0.6F, 2.9F).clientTrackingRange(8).build(ID + ":charged_ender_creeper"));
+    public static final RegistryObject<Item> ENDER_SPAWN_EGG = ITEMS.register("ender_creeper_spawn_egg",
+            () -> new ForgeSpawnEggItem(ENDER_CREEPER, 0x438C35, 0xBE22F4, new Item.Properties()));
+    public static final RegistryObject<Item> CHARGED_ENDER_SPAWN_EGG = ITEMS.register("charged_ender_creeper_spawn_egg",
+            () -> new ForgeSpawnEggItem(CHARGED_ENDER_CREEPER, 0x4A205D, 0x62ECFF, new Item.Properties()));
 
     public CreeperPhantomMod() {
         IEventBus bus = FMLJavaModLoadingContext.get().getModEventBus();
@@ -47,12 +58,16 @@ public final class CreeperPhantomMod {
     private void attributes(EntityAttributeCreationEvent event) {
         event.put(PHANTOM.get(), Monster.createMonsterAttributes().build());
         event.put(CHARGED_PHANTOM.get(), Monster.createMonsterAttributes().build());
+        event.put(ENDER_CREEPER.get(), EnderMan.createAttributes().build());
+        event.put(CHARGED_ENDER_CREEPER.get(), EnderMan.createAttributes().build());
     }
 
     private void creativeTab(BuildCreativeModeTabContentsEvent event) {
         if (event.getTabKey().equals(CreativeModeTabs.SPAWN_EGGS)) {
             event.accept(SPAWN_EGG);
             event.accept(CHARGED_SPAWN_EGG);
+            event.accept(ENDER_SPAWN_EGG);
+            event.accept(CHARGED_ENDER_SPAWN_EGG);
         }
     }
 }

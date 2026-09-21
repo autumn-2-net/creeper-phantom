@@ -12,5 +12,7 @@ public final class ClientEvents {
     public static void renderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerEntityRenderer(CreeperPhantomMod.PHANTOM.get(), CreeperPhantomRenderer::new);
         event.registerEntityRenderer(CreeperPhantomMod.CHARGED_PHANTOM.get(), CreeperPhantomRenderer::new);
+        event.registerEntityRenderer(CreeperPhantomMod.ENDER_CREEPER.get(), EnderCreeperRenderer::new);
+        event.registerEntityRenderer(CreeperPhantomMod.CHARGED_ENDER_CREEPER.get(), EnderCreeperRenderer::new);
     }
 }
