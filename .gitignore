@@ -1,0 +1,15 @@
+.gradle/
+.gradle-user-home/
+.local/
+build/
+run/
+run-gametest/
+*.log
+build-local.ps1
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+.env
+.env.*

@@ -1,0 +1,44 @@
+plugins {
+    id 'dev.architectury.loom' version '1.6-SNAPSHOT'
+}
+
+group = 'net.creeperphantom'
+version = project.mod_version
+base { archivesName = 'creeper-phantom-forge-1.20.1' }
+
+java {
+    sourceCompatibility = targetCompatibility = JavaVersion.VERSION_17
+    withSourcesJar()
+}
+
+repositories { mavenCentral() }
+loom { silentMojangMappingsLicense() }
+
+// Optional real-world smoke tests; never packaged in the normal release jar.
+if (project.hasProperty('verification')) {
+    sourceSets.main.java.srcDir 'src/verification/java'
+    sourceSets.main.resources.srcDir 'src/verification/resources'
+    loom.runs {
+        gameTest {
+            server()
+            runDir 'run-gametest'
+            property 'forge.gameTestServer', 'true'
+            property 'forge.enabledGameTestNamespaces', 'creeperphantom'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    forge "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+    mappings loom.officialMojangMappings()
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/mods.toml') { expand version: project.version }
+}
